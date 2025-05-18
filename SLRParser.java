@@ -4,20 +4,6 @@ public class SLRParser {
     private List<String> tokens;
     private int index = 0;
 
-    // Example grammar terminals and non-terminals:
-    // For simplicity, let’s say grammar supports:
-    // program -> decl_list stmt_list
-    // decl -> int id = number ;
-    // stmt -> while ( expr ) block
-    // stmt -> if ( expr ) block else block
-    // stmt -> printf ( string ) ;
-    // expr -> id < number | id == number
-    // block -> { stmt_list }
-    // stmt_list -> stmt stmt_list | epsilon
-
-    // For real SLR, you need states and action/goto tables.
-    // Here we simulate parsing with recursive descent for demonstration.
-
     public SLRParser(List<String> tokens) {
         this.tokens = tokens;
     }
@@ -25,8 +11,7 @@ public class SLRParser {
     public boolean parse() {
         try {
             parseProgram();
-            if (index == tokens.size()) return true;
-            else return false;
+            return index == tokens.size();
         } catch (Exception e) {
             return false;
         }
@@ -46,9 +31,9 @@ public class SLRParser {
     private void parseDecl() throws Exception {
         match("int");
         match("id");
-        if (peek().equals("=")) {
-            match("=");
-            match("number");
+        while (peek().equals(",")) {
+            match(",");
+            match("id");
         }
         match(";");
     }
@@ -66,7 +51,7 @@ public class SLRParser {
 
     private void parseStmt() throws Exception {
         String t = peek();
-        switch(t) {
+        switch (t) {
             case "while":
                 match("while");
                 match("(");
@@ -89,29 +74,43 @@ public class SLRParser {
                 match("printf");
                 match("(");
                 match("string");
+                if (peek().equals(",")) {
+                    match(",");
+                    if (peek().equals("&")) match("&");
+                    match("id");
+                }
                 match(")");
                 match(";");
                 break;
             case "id":
-                // Could add assignment or function call stmt
-                throw new Exception("id stmt not implemented");
+                parseAssignment();
+                break;
             default:
                 throw new Exception("Unexpected token: " + t);
         }
     }
 
-    private void parseExpr() throws Exception {
+    private void parseAssignment() throws Exception {
         match("id");
-        String op = peek();
-        if (op.equals("<") || op.equals("==") || op.equals(">")) {
-            match(op);
-        } else {
-            throw new Exception("Expected relational operator");
-        }
-        if (peek().equals("number") || peek().equals("id")) {
+        match("=");
+        parseExpr();
+        match(";");
+    }
+
+    private void parseExpr() throws Exception {
+        parseTerm();
+        while (peek().equals("+") || peek().equals("-")) {
             match(peek());
+            parseTerm();
+        }
+    }
+
+    private void parseTerm() throws Exception {
+        String t = peek();
+        if (t.equals("id") || t.equals("number")) {
+            match(t);
         } else {
-            throw new Exception("Expected number or id in expr");
+            throw new Exception("Expected id or number in expression");
         }
     }
 
