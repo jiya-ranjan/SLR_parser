@@ -13,6 +13,7 @@ public class SLRParser {
             parseProgram();
             return index == tokens.size();
         } catch (Exception e) {
+            System.err.println("Parse error: " + e.getMessage());
             return false;
         }
     }
@@ -28,12 +29,21 @@ public class SLRParser {
         }
     }
 
+    // ✅ Enhanced Declaration Parsing (with initialization)
     private void parseDecl() throws Exception {
         match("int");
         match("id");
+        if (peek().equals("=")) {
+            match("=");
+            parseExpr();
+        }
         while (peek().equals(",")) {
             match(",");
             match("id");
+            if (peek().equals("=")) {
+                match("=");
+                parseExpr();
+            }
         }
         match(";");
     }
@@ -46,12 +56,11 @@ public class SLRParser {
 
     private boolean peekIsStmtStart() {
         String t = peek();
-        return t.equals("if") || t.equals("while") || t.equals("printf") || t.equals("id");
+        return t.equals("if") || t.equals("while") || t.equals("printf") || t.equals("id") || t.equals("return");
     }
 
     private void parseStmt() throws Exception {
-        String t = peek();
-        switch (t) {
+        switch (peek()) {
             case "while":
                 match("while");
                 match("(");
@@ -82,11 +91,14 @@ public class SLRParser {
                 match(")");
                 match(";");
                 break;
+            case "return":
+                parseReturnStmt();
+                break;
             case "id":
                 parseAssignment();
                 break;
             default:
-                throw new Exception("Unexpected token: " + t);
+                throw new Exception("Unexpected token in statement: " + peek());
         }
     }
 
@@ -97,7 +109,44 @@ public class SLRParser {
         match(";");
     }
 
+    // ✅ Enhanced Expression Parsing
     private void parseExpr() throws Exception {
+        parseLogicalOr();
+    }
+
+    private void parseLogicalOr() throws Exception {
+        parseLogicalAnd();
+        while (peek().equals("||")) {
+            match("||");
+            parseLogicalAnd();
+        }
+    }
+
+    private void parseLogicalAnd() throws Exception {
+        parseEquality();
+        while (peek().equals("&&")) {
+            match("&&");
+            parseEquality();
+        }
+    }
+
+    private void parseEquality() throws Exception {
+        parseRelational();
+        while (peek().equals("==") || peek().equals("!=")) {
+            match(peek());
+            parseRelational();
+        }
+    }
+
+    private void parseRelational() throws Exception {
+        parseAdditive();
+        while (Arrays.asList("<", "<=", ">", ">=").contains(peek())) {
+            match(peek());
+            parseAdditive();
+        }
+    }
+
+    private void parseAdditive() throws Exception {
         parseTerm();
         while (peek().equals("+") || peek().equals("-")) {
             match(peek());
@@ -106,12 +155,46 @@ public class SLRParser {
     }
 
     private void parseTerm() throws Exception {
-        String t = peek();
-        if (t.equals("id") || t.equals("number")) {
-            match(t);
-        } else {
-            throw new Exception("Expected id or number in expression");
+        parseFactor();
+        while (peek().equals("*") || peek().equals("/")) {
+            match(peek());
+            parseFactor();
         }
+    }
+
+    private void parseFactor() throws Exception {
+        if (peek().equals("(")) {
+            match("(");
+            parseExpr();
+            match(")");
+        } else if (peek().equals("id")) {
+            match("id");
+            if (peek().equals("(")) {
+                parseFunctionCall();
+            }
+        } else if (peek().equals("number")) {
+            match("number");
+        } else {
+            throw new Exception("Expected id, number, or expression in parentheses.");
+        }
+    }
+
+    private void parseFunctionCall() throws Exception {
+        match("(");
+        if (!peek().equals(")")) {
+            parseExpr();
+            while (peek().equals(",")) {
+                match(",");
+                parseExpr();
+            }
+        }
+        match(")");
+    }
+
+    private void parseReturnStmt() throws Exception {
+        match("return");
+        parseExpr();
+        match(";");
     }
 
     private void parseBlock() throws Exception {
@@ -121,15 +204,16 @@ public class SLRParser {
     }
 
     private String peek() {
-        if (index < tokens.size()) return tokens.get(index);
-        else return "";
+        return index < tokens.size() ? tokens.get(index) : "";
     }
 
     private void match(String expected) throws Exception {
         if (index < tokens.size() && tokens.get(index).equals(expected)) {
             index++;
         } else {
-            throw new Exception("Expected " + expected + " but found " + (index < tokens.size() ? tokens.get(index) : "EOF"));
+            throw new Exception("Expected '" + expected + "' but found '" +
+                (index < tokens.size() ? tokens.get(index) : "EOF") + "'");
         }
     }
 }
+
