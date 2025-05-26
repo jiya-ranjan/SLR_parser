@@ -1,219 +1,89 @@
-import java.util.*;
+import java.util.List;
 
 public class SLRParser {
-    private List<String> tokens;
-    private int index = 0;
 
-    public SLRParser(List<String> tokens) {
-        this.tokens = tokens;
-    }
+    public static boolean parse(List<String[]> tokens) {
+        boolean foundInclude = false;
+        boolean foundHeader = false;
+        boolean foundMain = false;
+        int braceCount = 0;
 
-    public boolean parse() {
-        try {
-            parseProgram();
-            return index == tokens.size();
-        } catch (Exception e) {
-            System.err.println("Parse error: " + e.getMessage());
+        for (int i = 0; i < tokens.size(); i++) {
+            String token = tokens.get(i)[0];
+            String type = tokens.get(i)[1];
+
+            if (token.equals("#include")) {
+                foundInclude = true;
+            } else if (type.equals("header")) {
+                foundHeader = true;
+            } else if (token.equals("main")) {
+                foundMain = true;
+                // Check for main()
+                if (i + 2 >= tokens.size() || 
+                    !tokens.get(i + 1)[0].equals("(") || 
+                    !tokens.get(i + 2)[0].equals(")")) {
+                    System.out.println("Error: main() syntax incorrect");
+                    return false;
+                }
+            } else if (token.equals("{")) {
+                braceCount++;
+            } else if (token.equals("}")) {
+                braceCount--;
+            }
+
+            // SEMICOLON CHECK
+            // If 'int' or 'printf' is found, expect a semicolon at the end
+            if (token.equals("int")) {
+                boolean foundSemicolon = false;
+                for (int j = i + 1; j < tokens.size(); j++) {
+                    if (tokens.get(j)[0].equals(";")) {
+                        foundSemicolon = true;
+                        break;
+                    }
+                    // Stop if block ends
+                    if (tokens.get(j)[0].equals("}")) break;
+                }
+                if (!foundSemicolon) {
+                    System.out.println("Error: Missing semicolon after variable declaration");
+                    return false;
+                }
+            }
+
+            if (token.equals("printf")) {
+                boolean foundSemicolon = false;
+                for (int j = i + 1; j < tokens.size(); j++) {
+                    if (tokens.get(j)[0].equals(";")) {
+                        foundSemicolon = true;
+                        break;
+                    }
+                    if (tokens.get(j)[0].equals("}")) break;
+                }
+                if (!foundSemicolon) {
+                    System.out.println("Error: Missing semicolon after printf");
+                    return false;
+                }
+            }
+        }
+
+        // Final structural checks
+        System.out.println("foundInclude: " + foundInclude);
+        System.out.println("foundHeader: " + foundHeader);
+        System.out.println("foundMain: " + foundMain);
+        System.out.println("braceCount: " + braceCount);
+
+        if (!foundInclude || !foundHeader) {
+            System.out.println("Error: Missing #include or header");
             return false;
         }
-    }
-
-    private void parseProgram() throws Exception {
-        parseDeclList();
-        parseStmtList();
-    }
-
-    private void parseDeclList() throws Exception {
-        while (peek().equals("int")) {
-            parseDecl();
+        if (!foundMain) {
+            System.out.println("Error: Missing main function");
+            return false;
         }
-    }
-
-    // ✅ Enhanced Declaration Parsing (with initialization)
-    private void parseDecl() throws Exception {
-        match("int");
-        match("id");
-        if (peek().equals("=")) {
-            match("=");
-            parseExpr();
+        if (braceCount != 0) {
+            System.out.println("Error: Braces mismatch");
+            return false;
         }
-        while (peek().equals(",")) {
-            match(",");
-            match("id");
-            if (peek().equals("=")) {
-                match("=");
-                parseExpr();
-            }
-        }
-        match(";");
-    }
 
-    private void parseStmtList() throws Exception {
-        while (peekIsStmtStart()) {
-            parseStmt();
-        }
-    }
-
-    private boolean peekIsStmtStart() {
-        String t = peek();
-        return t.equals("if") || t.equals("while") || t.equals("printf") || t.equals("id") || t.equals("return");
-    }
-
-    private void parseStmt() throws Exception {
-        switch (peek()) {
-            case "while":
-                match("while");
-                match("(");
-                parseExpr();
-                match(")");
-                parseBlock();
-                break;
-            case "if":
-                match("if");
-                match("(");
-                parseExpr();
-                match(")");
-                parseBlock();
-                if (peek().equals("else")) {
-                    match("else");
-                    parseBlock();
-                }
-                break;
-            case "printf":
-                match("printf");
-                match("(");
-                match("string");
-                if (peek().equals(",")) {
-                    match(",");
-                    if (peek().equals("&")) match("&");
-                    match("id");
-                }
-                match(")");
-                match(";");
-                break;
-            case "return":
-                parseReturnStmt();
-                break;
-            case "id":
-                parseAssignment();
-                break;
-            default:
-                throw new Exception("Unexpected token in statement: " + peek());
-        }
-    }
-
-    private void parseAssignment() throws Exception {
-        match("id");
-        match("=");
-        parseExpr();
-        match(";");
-    }
-
-    // ✅ Enhanced Expression Parsing
-    private void parseExpr() throws Exception {
-        parseLogicalOr();
-    }
-
-    private void parseLogicalOr() throws Exception {
-        parseLogicalAnd();
-        while (peek().equals("||")) {
-            match("||");
-            parseLogicalAnd();
-        }
-    }
-
-    private void parseLogicalAnd() throws Exception {
-        parseEquality();
-        while (peek().equals("&&")) {
-            match("&&");
-            parseEquality();
-        }
-    }
-
-    private void parseEquality() throws Exception {
-        parseRelational();
-        while (peek().equals("==") || peek().equals("!=")) {
-            match(peek());
-            parseRelational();
-        }
-    }
-
-    private void parseRelational() throws Exception {
-        parseAdditive();
-        while (Arrays.asList("<", "<=", ">", ">=").contains(peek())) {
-            match(peek());
-            parseAdditive();
-        }
-    }
-
-    private void parseAdditive() throws Exception {
-        parseTerm();
-        while (peek().equals("+") || peek().equals("-")) {
-            match(peek());
-            parseTerm();
-        }
-    }
-
-    private void parseTerm() throws Exception {
-        parseFactor();
-        while (peek().equals("*") || peek().equals("/")) {
-            match(peek());
-            parseFactor();
-        }
-    }
-
-    private void parseFactor() throws Exception {
-        if (peek().equals("(")) {
-            match("(");
-            parseExpr();
-            match(")");
-        } else if (peek().equals("id")) {
-            match("id");
-            if (peek().equals("(")) {
-                parseFunctionCall();
-            }
-        } else if (peek().equals("number")) {
-            match("number");
-        } else {
-            throw new Exception("Expected id, number, or expression in parentheses.");
-        }
-    }
-
-    private void parseFunctionCall() throws Exception {
-        match("(");
-        if (!peek().equals(")")) {
-            parseExpr();
-            while (peek().equals(",")) {
-                match(",");
-                parseExpr();
-            }
-        }
-        match(")");
-    }
-
-    private void parseReturnStmt() throws Exception {
-        match("return");
-        parseExpr();
-        match(";");
-    }
-
-    private void parseBlock() throws Exception {
-        match("{");
-        parseStmtList();
-        match("}");
-    }
-
-    private String peek() {
-        return index < tokens.size() ? tokens.get(index) : "";
-    }
-
-    private void match(String expected) throws Exception {
-        if (index < tokens.size() && tokens.get(index).equals(expected)) {
-            index++;
-        } else {
-            throw new Exception("Expected '" + expected + "' but found '" +
-                (index < tokens.size() ? tokens.get(index) : "EOF") + "'");
-        }
+        return true;
     }
 }
-
