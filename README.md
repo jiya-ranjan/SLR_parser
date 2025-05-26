@@ -1,29 +1,86 @@
-run GUI java file
+# 🧠 C SLR Parser GUI
 
+This project is a simple **C language parser** built with **Java Swing** that performs:
 
-ab isme sb chal rha h guyzzzzzzz
-🥳🥳🥳🥳🥳🥳🥳🥳
+- **Lexical Analysis** (Lexer)
+- **Parsing** (SLR-style)
+- **AST Visualization**
+- Validates basic structure of C code like `#include`, `main()` function, and semicolon usage.
 
-isme loop conditional and declaration type chal skta h koi dikkat nhi h .......
+---
 
+## 📁 Project Structure
 
+```
+SLR_parser/
+├── ParserGUI.java     # Main GUI class (Swing-based)
+├── Lexer.java         # Lexical analyzer: tokenizes C code
+├── SLRParser.java     # Parser: validates token list using rules
+```
 
-What Does a Parser Do?
-Input: The parser receives a list of tokens (like keywords, identifiers, symbols) that represent the code.
+---
 
-Analyze Syntax: It checks whether the sequence of tokens fits the rules of the programming language’s grammar.
+## 🛠 Features
 
-For example, it verifies if int a = 1; follows the language rules for declaring a variable.
+- 📥 **File Upload**: Select and load a `.c` file
+- 🔍 **Lexical Analysis**: Extracts tokens and types
+- 🧾 **Parsing**: Validates syntax structure of C code
+- 🌳 **AST Output**: Displays a basic abstract syntax tree (hierarchical layout)
+- ❌ Detects errors like:
+  - Missing `#include` or headers
+  - Improper `main()` syntax
+  - Mismatched `{}` braces
+  - ❗ Missing semicolons after declarations and statements
 
-Build Structure: Often, the parser builds an internal parse tree or abstract syntax tree (AST) representing the hierarchical structure of the program.
+---
 
-Output:
+## ✅ Example Input (Valid)
 
-If the input code is syntactically correct, the parser confirms it’s valid and may produce the parse tree.
+```c
+#include<stdio.h>
+int main() {
+    int a;
+    printf("hello");
+}
+```
 
-If the code violates grammar rules, the parser reports errors or invalid syntax.
+---
 
+## ❌ Example Input (Invalid)
 
+```c
+#include<stdio.h>
+int main() {
+    int a           // ❌ Missing semicolon
+    printf("hello");
+}
+```
 
-our parser is doing the same thing
+---
+
+## 🚀 How to Run
+
+1. **Compile All Java Files:**
+   ```bash
+   javac ParserGUI.java Lexer.java SLRParser.java
+   ```
+
+2. **Run the GUI:**
+   ```bash
+   java ParserGUI
+   ```
+
+---
+
+## 📸 Screenshots
+
+*(Add screenshots here of GUI with lexer table, parser output, and AST output)*
+
+---
+
+## 🤖 Technologies Used
+
+- Java Swing (GUI)
+- Java I/O (File reading)
+- Custom Lexer and SLR-style Parser logic
 
