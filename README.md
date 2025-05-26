@@ -74,7 +74,8 @@ int main() {
 
 ## 📸 Screenshots
 
-*(Add screenshots here of GUI with lexer table, parser output, and AST output)*
+![image](https://github.com/user-attachments/assets/56af2a32-4939-4ad6-afc9-7bb821916f75)
+
 
 ---
 
